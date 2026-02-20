@@ -1,0 +1,14 @@
+{
+  "name": "cabo-guerra-ultra",
+  "version": "4.0.0",
+  "description": "Cabo de Guerra Matemático ULTRA Premium",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.8.0",
+    "uuid": "^9.0.0"
+  }
+}
