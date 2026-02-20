@@ -1,0 +1,31 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: radial-gradient(circle at center, #1e272e, #000);
+  color: white;
+  text-align: center;
+}
+#arena {
+  position: relative;
+  height: 50vh;
+}
+#rope {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60%;
+  height: 12px;
+  background: #8e6e53;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+}
+#marker {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  background: red;
+  border-radius: 50%;
+  transition: left 0.3s ease;
+}

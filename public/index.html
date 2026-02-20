@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cabo de Guerra ULTRA</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cabo-guerra-servidor.onrender.com/socket.io/socket.io.js"></script>
+</head>
+<body>
+<h1>🏆 Cabo de Guerra Matemático ULTRA</h1>
+
+<div id="arena">
+  <div id="rope">
+    <div id="marker"></div>
+  </div>
+</div>
+
+<div id="question"></div>
+<input type="number" id="answer" placeholder="Sua resposta">
+<button id="send">Enviar</button>
+
+<audio id="crowd" src="assets/crowd.mp3"></audio>
+<audio id="win" src="assets/win.mp3"></audio>
+<audio id="tension" src="assets/tension.mp3"></audio>
+
+<script>
+const socket = io("https://cabo-guerra-servidor.onrender.com");
+</script>
+<script src="game.js"></script>
+</body>
+</html>
