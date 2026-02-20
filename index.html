@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cabo de Guerra Matemático - Multiplayer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background: #1e272e; color: #fff; margin: 0; padding: 0; }
+    #app { max-width: 1000px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    .card { background: #2f3640; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    input, select { padding: 10px; font-size: 1em; border-radius: 5px; border: none; margin: 5px 0; width: 100%; max-width: 300px; }
+    button { padding: 10px 20px; font-size: 1em; border-radius: 5px; border: none; cursor: pointer; margin: 5px; }
+    button.primary { background: #44bd32; color: #fff; }
+    button.secondary { background: #487eb0; color: #fff; }
+    button.danger { background: #e84118; color: #fff; }
+    #game-area { display: none; }
+    #timer { font-size: 2em; font-weight: bold; margin: 10px 0; }
+    #question { font-size: 2.5em; margin: 20px 0; }
+    #info { margin-top: 10px; }
+    .flex { display: flex; flex-wrap: wrap; gap: 20px; }
+    .column { flex: 1; min-width: 250px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #7f8fa6; padding: 5px; text-align: left; font-size: 0.9em; }
+  </style>
+  <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <h1>Cabo de Guerra Matemático</h1>
+
+    <div id="login-card" class="card">
+      <h2>Entrar no Jogo</h2>
+      <label>Nome do jogador:</label><br>
+      <input type="text" id="playerName" placeholder="Seu nome"><br>
+      <label>Grupo (até 8 grupos):</label><br>
+      <select id="playerGroup">
+        <option>Grupo 1</option>
+        <option>Grupo 2</option>
+        <option>Grupo 3</option>
+        <option>Grupo 4</option>
+        <option>Grupo 5</option>
+        <option>Grupo 6</option>
+        <option>Grupo 7</option>
+        <option>Grupo 8</option>
+      </select><br>
+      <button class="primary" id="joinBtn">Entrar</button>
+      <p style="font-size:0.8em;opacity:.8;">O professor abrirá o servidor; todos acessam este link (GitHub Pages) e entram com nome e grupo.</p>
+    </div>
+
+    <div id="game-area" class="card">
+      <div class="flex">
+        <div class="column">
+          <h2>Jogo</h2>
+          <div id="status"></div>
+          <div id="questionIndex"></div>
+          <div id="timer">Tempo: 30s</div>
+          <div id="question"></div>
+          <input type="number" id="answerInput" placeholder="Sua resposta">
+          <br>
+          <button class="primary" id="sendAnswerBtn">Enviar resposta</button>
+          <button class="secondary" id="startGameBtn">Iniciar jogo (professor)</button>
+          <div id="answerFeedback"></div>
+          <div id="info"></div>
+        </div>
+        <div class="column">
+          <h3>Ranking Individual</h3>
+          <table>
+            <thead>
+              <tr><th>#</th><th>Nome</th><th>Grupo</th><th>Pontos</th></tr>
+            </thead>
+            <tbody id="rankingIndividual"></tbody>
+          </table>
+        </div>
+        <div class="column">
+          <h3>Ranking por Grupos</h3>
+          <table>
+            <thead>
+              <tr><th>#</th><th>Grupo</th><th>Pontos</th></tr>
+            </thead>
+            <tbody id="rankingGroups"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="game-end" class="card" style="display:none;">
+      <h2>Partida Encerrada</h2>
+      <p>Ranking final disponível acima.</p>
+    </div>
+  </div>
+
+  <script>
+    // TROQUE AQUI pela URL do seu servidor Node (Render/Railway/Glitch)
+    const SERVER_URL = "http://localhost:3000";
+
+    const socket = io(SERVER_URL);
+
+    const loginCard = document.getElementById('login-card');
+    const gameArea = document.getElementById('game-area');
+    const gameEnd = document.getElementById('game-end');
+    const joinBtn = document.getElementById('joinBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const sendAnswerBtn = document.getElementById('sendAnswerBtn');
+    const playerNameInput = document.getElementById('playerName');
+    const playerGroupSelect = document.getElementById('playerGroup');
+    const questionDiv = document.getElementById('question');
+    const timerDiv = document.getElementById('timer');
+    const questionIndexDiv = document.getElementById('questionIndex');
+    const answerInput = document.getElementById('answerInput');
+    const answerFeedback = document.getElementById('answerFeedback');
+    const infoDiv = document.getElementById('info');
+    const rankingIndividualBody = document.getElementById('rankingIndividual');
+    const rankingGroupsBody = document.getElementById('rankingGroups');
+    const statusDiv = document.getElementById('status');
+
+    let joined = false;
+
+    joinBtn.onclick = () => {
+      const name = playerNameInput.value.trim();
+      const group = playerGroupSelect.value;
+      if (!name) {
+        alert('Digite seu nome.');
+        return;
+      }
+      socket.emit('join', { name, group });
+    };
+
+    startGameBtn.onclick = () => {
+      socket.emit('startGame');
+    };
+
+    sendAnswerBtn.onclick = () => {
+      const val = answerInput.value.trim();
+      if (!val) {
+        alert('Digite uma resposta.');
+        return;
+      }
+      socket.emit('answer', { answer: val });
+      answerInput.value = '';
+      sendAnswerBtn.disabled = true; // evita spam
+    };
+
+    answerInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendAnswerBtn.click();
+    });
+
+    // Eventos do servidor
+    socket.on('joined', (data) => {
+      joined = true;
+      loginCard.style.display = 'none';
+      gameArea.style.display = 'block';
+      statusDiv.textContent = `Você é ${data.name} (${data.group}). Aguarde o professor iniciar.`;
+    });
+
+    socket.on('gameStatus', ({ started, currentQuestion }) => {
+      if (!started) {
+        infoDiv.textContent = 'O jogo ainda não começou. O professor pode iniciar.';
+      } else {
+        infoDiv.textContent = `Jogo em andamento. Questão atual: ${currentQuestion}.`;
+      }
+    });
+
+    socket.on('newQuestion', ({ index, total, a, b, op }) => {
+      questionIndexDiv.textContent = `Questão ${index} de ${total}`;
+      questionDiv.textContent = `${a} ${op} ${b} = ?`;
+      timerDiv.textContent = 'Tempo: 30s';
+      answerFeedback.textContent = '';
+      sendAnswerBtn.disabled = false;
+      answerInput.disabled = false;
+      answerInput.focus();
+    });
+
+    socket.on('timer', ({ remaining }) => {
+      const seconds = Math.ceil(remaining / 1000);
+      timerDiv.textContent = `Tempo: ${seconds}s`;
+      if (seconds <= 5) {
+        timerDiv.style.color = '#e84118';
+      } else {
+        timerDiv.style.color = '#ffffff';
+      }
+    });
+
+    socket.on('questionEnded', () => {
+      answerInput.disabled = true;
+      sendAnswerBtn.disabled = true;
+      answerFeedback.textContent = 'Tempo esgotado. Aguarde a próxima questão.';
+    });
+
+    socket.on('answerResult', ({ correct, points, totalScore, correctAnswer }) => {
+      if (correct) {
+        answerFeedback.textContent = `Correto! Você ganhou ${points} pontos. Total: ${totalScore}.`;
+        answerFeedback.style.color = '#44bd32';
+      } else {
+        answerFeedback.textContent = `Resposta incorreta. A correta era ${correctAnswer}. Você ganhou 0 pontos.`;
+        answerFeedback.style.color = '#e84118';
+      }
+    });
+
+    socket.on('rankingUpdate', ({ rankingIndividual, rankingGroups }) => {
+      renderRankingIndividual(rankingIndividual);
+      renderRankingGroups(rankingGroups);
+    });
+
+    socket.on('playersUpdate', (rankingIndividual) => {
+      renderRankingIndividual(rankingIndividual);
+    });
+
+    socket.on('gameEnded', ({ rankingIndividual, rankingGroups }) => {
+      gameEnd.style.display = 'block';
+      renderRankingIndividual(rankingIndividual);
+      renderRankingGroups(rankingGroups);
+      statusDiv.textContent = 'Partida encerrada.';
+    });
+
+    function renderRankingIndividual(list) {
+      rankingIndividualBody.innerHTML = '';
+      list.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx + 1}</td><td>${p.name}</td><td>${p.group}</td><td>${p.score}</td>`;
+        rankingIndividualBody.appendChild(tr);
+      });
+    }
+
+    function renderRankingGroups(list) {
+      rankingGroupsBody.innerHTML = '';
+      list.forEach((g, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx + 1}</td><td>${g.group}</td><td>${g.score}</td>`;
+        rankingGroupsBody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
