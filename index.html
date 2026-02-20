@@ -91,7 +91,7 @@
   </div>
 
   <script>
-    // TROQUE AQUI pela URL do seu servidor Node (Render/Railway/Glitch)
+    // SERVIDOR CORRETO
     const SERVER_URL = "https://cabo-guerra-servidor.onrender.com";
 
     const socket = io(SERVER_URL);
@@ -126,8 +126,15 @@
       socket.emit('join', { name, group });
     };
 
+    // SENHA DO PROFESSOR: MARISTA
     startGameBtn.onclick = () => {
-      socket.emit('startGame');
+      const senha = prompt('Digite a senha do professor:');
+      if (senha === 'Marista') {
+        socket.emit('startGame');
+        alert('✅ Jogo iniciado pelo professor!');
+      } else {
+        alert('❌ Senha incorreta. Apenas o professor pode iniciar o jogo.');
+      }
     };
 
     sendAnswerBtn.onclick = () => {
@@ -233,4 +240,3 @@
   </script>
 </body>
 </html>
-
