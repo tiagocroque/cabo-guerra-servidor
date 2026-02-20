@@ -22,6 +22,27 @@
     .column { flex: 1; min-width: 250px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid #7f8fa6; padding: 5px; text-align: left; font-size: 0.9em; }
+    #players-count { font-size: 1.5em; font-weight: bold; background: #3498db; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+    
+    /* Modal de senha */
+    #senha-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+    }
+    #senha-content {
+      background: #2f3640;
+      margin: 20% auto;
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+    }
   </style>
   <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
 </head>
@@ -49,6 +70,7 @@
     </div>
 
     <div id="game-area" class="card">
+      <div id="players-count">Jogadores conectados: 0</div>
       <div class="flex">
         <div class="column">
           <h2>Jogo</h2>
@@ -59,7 +81,7 @@
           <input type="number" id="answerInput" placeholder="Sua resposta">
           <br>
           <button class="primary" id="sendAnswerBtn">Enviar resposta</button>
-          <button class="secondary" id="startGameBtn">Iniciar jogo (professor)</button>
+          <button class="secondary" id="startGameBtn">🔑 Iniciar jogo (professor)</button>
           <div id="answerFeedback"></div>
           <div id="info"></div>
         </div>
@@ -88,6 +110,17 @@
       <h2>Partida Encerrada</h2>
       <p>Ranking final disponível acima.</p>
     </div>
+
+    <!-- Modal de senha do professor -->
+    <div id="senha-modal">
+      <div id="senha-content">
+        <h3>🔐 Senha do Professor</h3>
+        <input type="password" id="senha-input" placeholder="Digite a senha">
+        <br><br>
+        <button class="primary" id="senha-confirm">Confirmar</button>
+        <button class="danger" id="senha-cancel">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -99,11 +132,16 @@
     const loginCard = document.getElementById('login-card');
     const gameArea = document.getElementById('game-area');
     const gameEnd = document.getElementById('game-end');
+    const senhaModal = document.getElementById('senha-modal');
+    const senhaInput = document.getElementById('senha-input');
+    const senhaConfirm = document.getElementById('senha-confirm');
+    const senhaCancel = document.getElementById('senha-cancel');
     const joinBtn = document.getElementById('joinBtn');
     const startGameBtn = document.getElementById('startGameBtn');
     const sendAnswerBtn = document.getElementById('sendAnswerBtn');
     const playerNameInput = document.getElementById('playerName');
     const playerGroupSelect = document.getElementById('playerGroup');
+    const playersCount = document.getElementById('players-count');
     const questionDiv = document.getElementById('question');
     const timerDiv = document.getElementById('timer');
     const questionIndexDiv = document.getElementById('questionIndex');
@@ -115,6 +153,7 @@
     const statusDiv = document.getElementById('status');
 
     let joined = false;
+    let totalPlayers = 0;
 
     joinBtn.onclick = () => {
       const name = playerNameInput.value.trim();
@@ -126,15 +165,32 @@
       socket.emit('join', { name, group });
     };
 
-    // SENHA DO PROFESSOR: MARISTA
+    // MODAL SENHA DO PROFESSOR - MARISTA
     startGameBtn.onclick = () => {
-      const senha = prompt('Digite a senha do professor:');
-      if (senha === 'Marista') {
+      senhaModal.style.display = 'block';
+      senhaInput.focus();
+    };
+
+    senhaConfirm.onclick = () => {
+      if (senhaInput.value === 'Marista') {
         socket.emit('startGame');
         alert('✅ Jogo iniciado pelo professor!');
+        senhaModal.style.display = 'none';
+        senhaInput.value = '';
       } else {
         alert('❌ Senha incorreta. Apenas o professor pode iniciar o jogo.');
+        senhaInput.value = '';
+        senhaInput.focus();
       }
+    };
+
+    senhaCancel.onclick = () => {
+      senhaModal.style.display = 'none';
+      senhaInput.value = '';
+    };
+
+    senhaInput.onkeypress = (e) => {
+      if (e.key === 'Enter') senhaConfirm.click();
     };
 
     sendAnswerBtn.onclick = () => {
@@ -145,7 +201,7 @@
       }
       socket.emit('answer', { answer: val });
       answerInput.value = '';
-      sendAnswerBtn.disabled = true; // evita spam
+      sendAnswerBtn.disabled = true;
     };
 
     answerInput.addEventListener('keypress', (e) => {
@@ -210,6 +266,8 @@
     });
 
     socket.on('playersUpdate', (rankingIndividual) => {
+      totalPlayers = rankingIndividual.length;
+      playersCount.textContent = `Jogadores conectados: ${totalPlayers}`;
       renderRankingIndividual(rankingIndividual);
     });
 
@@ -237,6 +295,7 @@
         rankingGroupsBody.appendChild(tr);
       });
     }
-  </script>
+  </style>
+</script>
 </body>
 </html>
